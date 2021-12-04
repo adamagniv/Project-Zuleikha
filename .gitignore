@@ -1,5 +1,6 @@
 # Project Specific
 api_keys/
+conv_logs/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
