@@ -2,6 +2,7 @@ import openai
 import socket
 from time import sleep
 from uuid import uuid4
+from random import randint
 
 QUIT_MSG = 'ZQUIT'
 WELCOME = ("Hello, my name is Zuleikha. I'm inviting you to play a game :)\n"
@@ -66,6 +67,7 @@ class Zuleikha:
     def __init__(self, key = None, log = False, is_master = False):
         self.server = ''
         self.conn = ''
+        self.disrupt = randint(3,7)
         self.is_master = is_master
         self.should_log = log
         self.log_path = "conv_logs/" + str(uuid4()) + ".txt"
@@ -217,6 +219,8 @@ class Zuleikha:
             self.log.write(logged_msg + "\n")
         print(logged_msg)
 
+        self.disrupt -= 1
+
         return True
 
     def send_message(self):
@@ -226,15 +230,24 @@ class Zuleikha:
                 break
             print("[Zuleikha]: psssssst, hey! write something!")
         
+        quit = False
+        if msg == QUIT_MSG:
+            quit = True
+        elif msg != QUIT_MSG and self.disrupt <= 0:
+            # Zuleikha will disrupt the message, the sender won't know
+            msg = "BLABLA"
+            self.disrupt = randint(3,7)
+
         logged_msg = self.local_name + ": " + msg
         if (self.should_log):
             self.log.write(logged_msg + "\n")
         ZSend(self.conn, msg)
         
-        if msg == QUIT_MSG:
+        if quit:
             print("[Zuleikha]: I will never understand humans...")
             sleep(1)
             return False            
+        self.disrupt -= 1
 
         return True
 
