@@ -3,13 +3,14 @@ import socket
 from time import sleep
 from uuid import uuid4
 
+QUIT_MSG = 'ZQUIT'
 WELCOME = ("Hello, my name is Zuleikha. I'm inviting you to play a game :)\n"
         "Don't worry, the rules are simple, I know how you humans might be confused rather quickly...\n"
-        "Da Rulz:\n"
+        "The Rules:\n"
         "\t1. You are going to have a conversation with the other person behind the blinds.\n"
         "\t2. You are NOT ALLOWED TO SPEAK OUTLOUD! use only the prompt you have.\n"
         "\t3. You are going to choose a pre-defined scene to take a part of. Please stay in character.\n"
-        "\t4. If you want to quit please enter 'ZQUIT' to shut me down.")
+        "\t4. If you want to quit please enter '" + QUIT_MSG + "' to shut me down.")
 
 SCENE_INFO = [  ("",{True: "", False: ""}), 
                 ("couple.scene", {True: "Or", False: "Nina"})
@@ -73,7 +74,7 @@ class Zuleikha:
         self.local_name = ''
         self.remote_name = ''
         self.gpt_engine = "davinci"
-        openai.api_key = key
+        #openai.api_key = key
         if (self.should_log):
             self.log = open(self.log_path, "w")
 
@@ -117,7 +118,7 @@ class Zuleikha:
                 continue
             valid = True
         
-        print("sending request to play scene: " + str(scene_choice) + " to other side.\nplease wait for response.")
+        print("sending request to play scene: [" + str(scene_choice) + "] to other side.\nplease wait for response.")
         ZSend(self.conn, str(scene_choice))
 
         resp = ZRecv(self.conn).strip()       
@@ -165,11 +166,28 @@ class Zuleikha:
         sleep(3)
         print("Let us begin.")
         self.choose_game()
+
+        # Starting Finally...
+        quit = False
+        if (self.is_master):
+            print("You are starting the conversation.\n")
+            quit = not self.send_message()
+            if quit:
+                return
+        else:
+            print("Please wait for the other side to start the conversation.\n")
         
+        while (True):
+            quit = not self.recv_message()
+            if quit:
+                break
+            
+            quit = not self.send_message()
+            if quit:
+                break        
         return
 
     def choose_game(self):
-        
         while (True):
             ret = False
             if(self.is_master):
@@ -178,15 +196,47 @@ class Zuleikha:
                 ret = self.slave_wait()
             
             if (ret):
-                print("Both sides agreed!")
+                print("\nBoth sides agreed!")
                 print("\nSCENE INFO:\n" + self.scene_info.replace(". ",".\n"))
                 print("\nyou will play as: " + self.local_name)
                 break
             
-            print("Disagreed... lets try again...")
+            print("\nDisagreed... lets try again...")
             self.is_master = not self.is_master
 
         return
+
+    def recv_message(self):
+        msg = ZRecv(self.conn)
+        if msg == QUIT_MSG:
+            print("[Zuleikha]: your partner shut me down. I will never understand humans...")
+            return False
+        
+        logged_msg = self.remote_name + ": " + msg
+        if (self.should_log):
+            self.log.write(logged_msg + "\n")
+        print(logged_msg)
+
+        return True
+
+    def send_message(self):
+        while (True):
+            msg = input(self.local_name + ": ")
+            if msg.strip() != '':
+                break
+            print("[Zuleikha]: psssssst, hey! write something!")
+        
+        logged_msg = self.local_name + ": " + msg
+        if (self.should_log):
+            self.log.write(logged_msg + "\n")
+        ZSend(self.conn, msg)
+        
+        if msg == QUIT_MSG:
+            print("[Zuleikha]: I will never understand humans...")
+            sleep(1)
+            return False            
+
+        return True
 
     def run(self):
         self.connection()
