@@ -23,6 +23,15 @@ CHOICE = ("Please Choose a Scene [press the scene number]:\n"
 WAIT = ("Please wait while the other side will decide what scene to play.\n"
         "His options are:\n"
         "\t[1] Couple Relationship.")
+EMOTION = ["We are both very angry.",
+            "We are both very afraid.",
+            "We are both in love.",
+            "We are both depressed.",
+            "We are both very frustrated.",
+            "We are both very happy.",
+            "We are both out of our minds.",
+            "We don't know what to do.",
+            "We both want to make it better."]
 
 SERV_IP_ADDR = "127.0.0.1"
 PORT = 9001
@@ -78,7 +87,7 @@ class Zuleikha:
         self.local_name = ''
         self.remote_name = ''
         self.gpt_engine = "davinci"
-        #openai.api_key = key
+        openai.api_key = key
         if (self.should_log):
             self.log = open(self.log_path, "w")
 
@@ -167,10 +176,12 @@ class Zuleikha:
 
     def disrupt_msg(self):
         msg = 'BLABLA'
-        prompt = self.scene_info + "\n\n" + "\n".join(str(x) for x in list(self.ctx_q.queue)) + "\n" + self.local_name + ":"
-        #msg = self.create_gpt_response(prompt)
+        prompt = self.scene_info + " " + EMOTION[randint(0, len(EMOTION) -1)] + "\n\n" + \
+                "\n".join(str(x) for x in list(self.ctx_q.queue)) + "\n" + \
+                self.local_name + ":"
+        msg = self.create_gpt_response(prompt)
 
-        return msg
+        return msg.strip()
 
     def game(self):
         print(WELCOME)
