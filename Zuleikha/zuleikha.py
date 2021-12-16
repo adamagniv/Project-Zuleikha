@@ -1,9 +1,9 @@
 import openai
-import socket
 from time import sleep
 from uuid import uuid4
 from random import randint
 from queue import Queue
+from .zel_conn import ZConn
 
 QUIT_MSG = 'ZQUIT'
 WELCOME = ("Hello, my name is Zuleikha. I'm inviting you to play a game :)\n"
@@ -33,9 +33,6 @@ EMOTION = ["We are both very angry.",
             "We don't know what to do.",
             "We both want to make it better."]
 
-SERV_IP_ADDR = "127.0.0.1"
-PORT = 9001
-
 def print_banner():
     print('\n@@@@@@@   @@@@@@@    @@@@@@        @@@  @@@@@@@@   @@@@@@@  @@@@@@@            @@@@@@@@  @@@  @@@  @@@       @@@@@@@@  @@@  @@@  @@@  @@@  @@@   @@@@@@ ')
     print('@@@@@@@@  @@@@@@@@  @@@@@@@@       @@@  @@@@@@@@  @@@@@@@@  @@@@@@@            @@@@@@@@  @@@  @@@  @@@       @@@@@@@@  @@@  @@@  @@@  @@@  @@@  @@@@@@@@')
@@ -59,59 +56,38 @@ def print_banner():
     loop_dots("\tWasting Your Time")
     print("", flush=True)
 
-def ZSend(sock, msg):
-    try:
-        sock.send(msg.encode())
-    except:
-        sock.close()
-
-def ZRecv(sock):
-    try:
-        msg = sock.recv(256).decode()
-    except:
-        sock.close()
-    return msg
-
 
 class Zuleikha:
-    def __init__(self, key = None, log = False, is_master = False):
-        self.server = ''
-        self.conn = ''
+    def __init__(self, zconn, key=None, log=True, is_master=False):
+        self.zconn = zconn
         self.ctx_q = Queue(7)
         self.disrupt = randint(3,7)
         self.is_master = is_master
         self.should_log = log
-        self.log_path = "conv_logs/" + str(uuid4()) + ".txt"
         self.log = ''
         self.scene_info = ''
         self.local_name = ''
         self.remote_name = ''
         self.gpt_engine = "davinci"
         openai.api_key = key
-        if (self.should_log):
-            self.log = open(self.log_path, "w")
 
     def __del__(self):
+        self.zconn.teardown()
         if (self.should_log):
             self.log.close()
-            self.server.close()
-        self.conn.close()
 
-    def connection(self):
-        if (self.should_log):
-            # setting up the server for connections on the master
-            self.server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            self.server.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-            self.server.bind((SERV_IP_ADDR, PORT))
-            self.server.listen(1)
-            # accept connection from remote client
-            self.conn, _ = self.server.accept()
+    def create_log(self):
+        log_path = ''
+        if (self.is_master):
+            log_uuid = str(uuid4())
+            self.zconn.ZSend(log_uuid)
+            log_path = "conv_logs/" + log_uuid + "_master.txt"
         else:
-            # connect to remote server
-            self.conn = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            self.conn.connect((SERV_IP_ADDR, PORT))
-
-        return
+            log_uuid = self.zconn.ZRecv().strip()
+            log_path = "conv_logs/" + log_uuid + "_slave.txt"
+        
+        if (self.should_log):
+            self.log = open(log_path, "w")
 
     def set_scene(self, scene_index):
         with open("scenes/" + SCENE_INFO[scene_index][0], "r") as f:
@@ -132,9 +108,9 @@ class Zuleikha:
             valid = True
         
         print("sending request to play scene: [" + str(scene_choice) + "] to other side.\nplease wait for response.")
-        ZSend(self.conn, str(scene_choice))
+        self.zconn.ZSend(str(scene_choice))
 
-        resp = ZRecv(self.conn).strip()       
+        resp = self.zconn.ZRecv().strip()       
         if (resp == 'Y'):
             self.set_scene(scene_choice)
             return True
@@ -143,7 +119,7 @@ class Zuleikha:
 
     def slave_wait(self):
         print(WAIT)
-        scene_choice = int(ZRecv(self.conn).strip())
+        scene_choice = int(self.zconn.ZRecv().strip())
         print("The other side chose scene: " + str(scene_choice))
         valid = False
         while(not valid):
@@ -154,7 +130,7 @@ class Zuleikha:
             valid = True
         
         print("sending response to other side.")
-        ZSend(self.conn, resp)
+        self.zconn.ZSend(resp)
 
         if (resp == 'Y'):
             self.set_scene(scene_choice)
@@ -162,7 +138,7 @@ class Zuleikha:
 
         return False
     
-    def create_gpt_response(self, text = ''):
+    def create_gpt_response(self, text=''):
         completion = openai.Completion.create(engine=self.gpt_engine,
                                                 prompt=text,
                                                 temperature=0.8,
@@ -237,7 +213,7 @@ class Zuleikha:
         return
 
     def recv_message(self):
-        msg = ZRecv(self.conn)
+        msg = self.zconn.ZRecv()
         if msg == QUIT_MSG:
             print("[Zuleikha]: your partner shut me down. I will never understand humans...")
             return False
@@ -269,7 +245,7 @@ class Zuleikha:
         logged_msg = self.local_name + ": " + msg
         if (self.should_log):
             self.log.write(logged_msg + "\n")
-        ZSend(self.conn, msg)
+        self.zconn.ZSend(msg)
         self.update_ctx(logged_msg)
 
         if quit:
@@ -281,7 +257,8 @@ class Zuleikha:
         return True
 
     def run(self):
-        self.connection()
+        self.zconn.setup()
+        self.create_log()
         print_banner()
         self.game()
 
