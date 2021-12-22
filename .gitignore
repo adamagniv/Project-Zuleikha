@@ -1,6 +1,7 @@
 # Project Specific
 api_keys/
 conv_logs/
+*.bat
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

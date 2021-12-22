@@ -16,12 +16,14 @@ WELCOME = ("Hello, my name is Zuleikha. I'm inviting you to play a game :)\n"
 
 SCENE_INFO = [  ("",{True: "", False: ""}), 
                 ("couple.scene", {True: "Or", False: "Nina"}),
-                ("grandchild.scene", {True: "Michael", False: "Liza"})
+                ("grandchild.scene", {True: "Michael", False: "Liza"}),
+                ("mother.scene", {True: "Tali", False: "Gili"})
              ]
 SCENE_AMOUNT = len(SCENE_INFO) - 1
 
 CHOICE_L = ["\t[1] Couple Relationship.",
-            "\t[2] Grandchild-Grandmother Relationship."]
+            "\t[2] Grandchild-Grandmother Relationship.",
+            "\t[3] Mother-Daughter Relationship."]
 CHOICE = "Please Choose a Scene [press the scene number]:\n" + "\n".join(x for x in CHOICE_L)
 WAIT = "Please wait while the other side will decide what scene to play.\nHis options are:\n" + "\n".join(x for x in CHOICE_L)
 EMOTION = ["We are both very angry.",
