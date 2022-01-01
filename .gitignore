@@ -1,6 +1,8 @@
 # Project Specific
 api_keys/
 conv_logs/
+faces/
+processed/
 *.bat
 
 # Byte-compiled / optimized / DLL files

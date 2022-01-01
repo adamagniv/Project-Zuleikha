@@ -65,6 +65,7 @@ class Zuleikha:
         self.zconn = zconn
         self.ctx_q = Queue(7)
         self.disrupt = randint(3,7)
+        self.session = str(uuid4())
         self.is_master = is_master
         self.should_log = log
         self.log = ''
@@ -82,12 +83,11 @@ class Zuleikha:
     def create_log(self):
         log_path = ''
         if (self.is_master):
-            log_uuid = str(uuid4())
-            self.zconn.ZSend(log_uuid)
-            log_path = "conv_logs/" + log_uuid + "_master.txt"
+            self.zconn.ZSend(self.session)
+            log_path = "conv_logs/" + self.session + "_master.txt"
         else:
-            log_uuid = self.zconn.ZRecv().strip()
-            log_path = "conv_logs/" + log_uuid + "_slave.txt"
+            self.session = self.zconn.ZRecv().strip()
+            log_path = "conv_logs/" + self.session + "_slave.txt"
         
         if (self.should_log):
             self.log = open(log_path, "w")
