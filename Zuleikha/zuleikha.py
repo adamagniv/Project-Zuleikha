@@ -285,7 +285,7 @@ class Zuleikha:
     def run(self):
         self.zconn.setup()
         self.create_log()
-        self.zemotion = ZEmotion(self.session)
+        self.zemotion = ZEmotion(self.session, True)
         print_banner()
         self.game()
 

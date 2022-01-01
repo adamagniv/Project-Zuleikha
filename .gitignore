@@ -3,6 +3,7 @@ api_keys/
 conv_logs/
 faces/
 processed/
+old/
 *.bat
 
 # Byte-compiled / optimized / DLL files
