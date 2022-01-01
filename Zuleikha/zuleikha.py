@@ -4,6 +4,7 @@ from uuid import uuid4
 from random import randint
 from queue import Queue
 from .zel_conn import ZConn
+from .zel_emotion import ZEmotion, EMOTION_ERR
 
 QUIT_MSG = 'ZQUIT'
 WELCOME = ("Hello, my name is Zuleikha. I'm inviting you to play a game :)\n"
@@ -14,10 +15,10 @@ WELCOME = ("Hello, my name is Zuleikha. I'm inviting you to play a game :)\n"
         "\t3. You are going to choose a pre-defined scene to take a part of. Please stay in character.\n"
         "\t4. If you want to quit please enter '" + QUIT_MSG + "' to shut me down.")
 
-SCENE_INFO = [  ("",{True: "", False: ""}), 
-                ("couple.scene", {True: "Or", False: "Nina"}),
-                ("grandchild.scene", {True: "Michael", False: "Liza"}),
-                ("mother.scene", {True: "Tali", False: "Gili"})
+SCENE_INFO = [  ("",{True: ("", ""), False: ("", "")}), 
+                ("couple.scene", {True: ("Or", "he"), False: ("Nina", "she")}),
+                ("grandchild.scene", {True: ("Michael", "he"), False: ("Liza", "she")}),
+                ("mother.scene", {True: ("Tali", "she"), False: ("Gili", "she")})
              ]
 SCENE_AMOUNT = len(SCENE_INFO) - 1
 
@@ -63,6 +64,7 @@ def print_banner():
 class Zuleikha:
     def __init__(self, zconn, key=None, log=True, is_master=False):
         self.zconn = zconn
+        self.zemotion = None
         self.ctx_q = Queue(7)
         self.disrupt = randint(3,7)
         self.session = str(uuid4())
@@ -72,12 +74,13 @@ class Zuleikha:
         self.scene_info = ''
         self.local_name = ''
         self.remote_name = ''
+        self.remote_pronoun = ''
         self.gpt_engine = "davinci"
         openai.api_key = key
 
     def __del__(self):
         self.zconn.teardown()
-        if (self.should_log):
+        if (self.should_log) and (not self.log.closed):
             self.log.close()
 
     def create_log(self):
@@ -95,8 +98,9 @@ class Zuleikha:
     def set_scene(self, scene_index):
         with open("scenes/" + SCENE_INFO[scene_index][0], "r") as f:
             self.scene_info = f.read()
-        self.local_name = SCENE_INFO[scene_index][1][self.is_master]
-        self.remote_name = SCENE_INFO[scene_index][1][not self.is_master]
+        self.local_name = SCENE_INFO[scene_index][1][self.is_master][0]
+        self.remote_name = SCENE_INFO[scene_index][1][not self.is_master][0]
+        self.remote_pronoun = SCENE_INFO[scene_index][1][not self.is_master][1]
 
     def master_choose(self):
         print(CHOICE)
@@ -109,7 +113,7 @@ class Zuleikha:
                 print("invalid option! try again")
                 continue
             valid = True
-        
+
         print("sending request to play scene: [" + str(scene_choice) + "] to other side.\nplease wait for response.")
         self.zconn.ZSend(str(scene_choice))
 
@@ -131,7 +135,7 @@ class Zuleikha:
                 print("invalid option! try again")
                 continue
             valid = True
-        
+
         print("sending response to other side.")
         self.zconn.ZSend(resp)
 
@@ -177,7 +181,7 @@ class Zuleikha:
                 return
         else:
             print("Please wait for the other side to start the conversation.\n")
-        
+
         while (True):
             quit = not self.recv_message()
             if quit:
@@ -219,12 +223,16 @@ class Zuleikha:
         msg = self.zconn.ZRecv()
         if msg == QUIT_MSG:
             print("[Zuleikha]: your partner shut me down. I will never understand humans...")
+            # clear stream from the last emotion sent
+            self.zconn.ZRecv()
             return False
-        
+
         logged_msg = self.remote_name + ": " + msg
         if (self.should_log):
             self.log.write(logged_msg + "\n")
+        zul_msg = self.recv_emotion()
         print(logged_msg)
+        print(zul_msg)
         self.update_ctx(logged_msg)
         self.disrupt -= 1
 
@@ -236,7 +244,8 @@ class Zuleikha:
             if msg.strip() != '':
                 break
             print("[Zuleikha]: psssssst, hey! write something!")
-        
+
+        local_emotion = self.zemotion.run()
         quit = False
         if msg == QUIT_MSG:
             quit = True
@@ -249,6 +258,7 @@ class Zuleikha:
         if (self.should_log):
             self.log.write(logged_msg + "\n")
         self.zconn.ZSend(msg)
+        self.send_emotion(local_emotion)
         self.update_ctx(logged_msg)
 
         if quit:
@@ -259,11 +269,24 @@ class Zuleikha:
 
         return True
 
+    def send_emotion(self, emotion):
+        if (emotion == EMOTION_ERR):
+            print("[Zuleikha]: I think there is an ERROR with your camera.")
+        self.zconn.ZSend(emotion)
+
+    def recv_emotion(self):
+        remote_emotion = self.zconn.ZRecv()
+        line = "[Zuleikha]: I think " + self.remote_pronoun + " felt " + remote_emotion + " when the message was sent."
+        if (remote_emotion == EMOTION_ERR):
+            line = "[Zuleikha]: I had a problem reading emotions for this message."
+
+        return line
+
     def run(self):
         self.zconn.setup()
         self.create_log()
+        self.zemotion = ZEmotion(self.session)
         print_banner()
         self.game()
 
         return
-

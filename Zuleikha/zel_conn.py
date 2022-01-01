@@ -2,7 +2,7 @@ import socket
 
 SERV_IP_ADDR = "20.0.0.10"
 PORT = 9001
-
+MSG_LEN = 512
 
 class ZConn:
     def __init__(self, init_server=False):
@@ -40,7 +40,7 @@ class ZConn:
 
     def ZRecv(self):
         try:
-            msg = self.sock.recv(256).decode()
+            msg = self.sock.recv(MSG_LEN).decode()
         except:
             self.sock.close()
         return msg
