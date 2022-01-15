@@ -8,12 +8,14 @@ from .zel_emotion import ZEmotion, EMOTION_ERR
 
 QUIT_MSG = 'ZQUIT'
 WELCOME = ("Hello, my name is Zuleikha. I'm inviting you to play a game :)\n"
-        "Don't worry, the rules are simple, I know how you humans might be confused rather quickly...\n"
+        "Don't worry, the rules are simple, I know how you humans might get confused rather quickly...\n"
         "The Rules:\n"
         "\t1. You are going to have a conversation with the other person behind the blinds.\n"
-        "\t2. You are NOT ALLOWED TO SPEAK OUTLOUD! use only the prompt you have.\n"
-        "\t3. You are going to choose a pre-defined scene to take a part of. Please stay in character.\n"
-        "\t4. If you want to quit please enter '" + QUIT_MSG + "' to shut me down.")
+        "\t2. You are NOT ALLOWED TO SPEAK OUTLOUD! use only the prompt I provide.\n"
+        "\t3. You are going to choose a pre-defined scene to take a part of. Please choose the one that fits the real relationship you two have.\n"
+        "\t4. Please stay in character.\n"
+        "\t5. If you want to quit please enter '" + QUIT_MSG + "' to shut me down.\n"
+        "\tNOTE: During this game I'm going to log the conversation and use the computer's camera. Taking part in the experiment means you agree.")
 
 SCENE_INFO = [  ("",{True: ("", ""), False: ("", "")}), 
                 ("couple.scene", {True: ("Or", "he"), False: ("Nina", "she")}),
@@ -149,7 +151,7 @@ class Zuleikha:
         completion = openai.Completion.create(engine=self.gpt_engine,
                                                 prompt=text,
                                                 temperature=0.8,
-                                                max_tokens=64,
+                                                max_tokens=96,
                                                 top_p=1,
                                                 frequency_penalty=0,
                                                 presence_penalty=0,
