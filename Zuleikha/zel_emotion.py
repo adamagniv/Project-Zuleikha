@@ -1,6 +1,7 @@
 import csv
 from subprocess import call, DEVNULL
 from cv2 import VideoCapture, imwrite, CAP_DSHOW
+from time import sleep
 
 EMOTION_PROC = "../OpenFace_2.2.0_win_x64/FaceLandmarkImg.exe"
 FACE_RD = "faces/"
@@ -38,8 +39,16 @@ class ZEmotion:
             self.web_cam.release()
 
     def take_pic(self):
-        result, image = self.web_cam.read()
+        result = None
+        image = None
         img_name = None
+
+        # Because the Y700 is slow to capture a good pic with the good camera
+        # found out that taking a pic more than once with a sleep fixes it.
+        for _ in range(10):
+            result, image = self.web_cam.read()
+            sleep(0.1)
+        
         if result:
             img_name = self.uuid + "_pic" + str(self.pic_n)
             imwrite(FACE_RD + img_name + IMG_FORMAT, image)
