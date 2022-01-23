@@ -9,8 +9,8 @@ AU_RD = "processed/"
 IMG_FORMAT = ".png"
 CSV_FORMAT = ".csv"
 
-# if it's the computer integrated camera change CAM_PORT to 0
-CAM_PORT = 1
+# choose the right camera port index! (I disabled all webcams excluding the one I want)
+CAM_PORT = 0
 AU_LIST = [ "AU01", "AU02", "AU04", "AU05", "AU06", "AU07",
             "AU09", "AU12", "AU15", "AU17", "AU20", "AU23", "AU26" ]
 EMOTION_ERR = "Error"
