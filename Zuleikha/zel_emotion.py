@@ -2,6 +2,8 @@ import csv
 from subprocess import call, DEVNULL
 from cv2 import VideoCapture, imwrite, CAP_DSHOW
 from time import sleep
+import os
+from shutil import rmtree
 
 EMOTION_PROC = "../OpenFace_2.2.0_win_x64/FaceLandmarkImg.exe"
 FACE_RD = "faces/"
@@ -48,23 +50,27 @@ class ZEmotion:
         for _ in range(10):
             result, image = self.web_cam.read()
             sleep(0.1)
-        
+
         if result:
             img_name = self.uuid + "_pic" + str(self.pic_n)
             imwrite(FACE_RD + img_name + IMG_FORMAT, image)
-        
+
         return img_name
 
     def process_pic(self, img_name):
         cmd = EMOTION_PROC + " -root " + FACE_RD + " -f " + img_name + IMG_FORMAT
         call(cmd , stdout=DEVNULL, shell=False)
+        try:
+            with open(AU_RD + img_name + CSV_FORMAT) as csvfile:
+                au_row0 = next(csv.DictReader(csvfile, delimiter=","))
+                for au_name in AU_LIST:
+                    self.au_intensity[au_name] = au_row0[" " + au_name + "_r"].strip()
+                    self.au_exsist[au_name] = float(au_row0[" " + au_name + "_c"].strip())
+        except:
+            return False
 
-        with open(AU_RD + img_name + CSV_FORMAT) as csvfile:
-            au_row0 = next(csv.DictReader(csvfile, delimiter=","))
-            for au_name in AU_LIST:
-                self.au_intensity[au_name] = au_row0[" " + au_name + "_r"].strip()
-                self.au_exsist[au_name] = float(au_row0[" " + au_name + "_c"].strip())
-    
+        return True
+
     def process_emotion(self):
         emotion = "Neutral"
         line = str(self.pic_n) + ": "
@@ -101,18 +107,31 @@ class ZEmotion:
         self.log.write(line + "\n")
         return emotion
 
+    def clean_data(self):
+        file_list = [f for f in os.listdir(AU_RD) if not f.endswith(".jpg") and not f.endswith(".csv")]
+        for f in file_list:
+            path = path = os.path.join("processed",f)
+            if os.path.isdir(path):
+                rmtree(path)
+            else:
+                os.remove(path)
+
     def run(self):
         if not self.work:
             return EMOTION_ERR
 
         self.au_exsist = {}
         self.au_intensity = {}
-        
+
         img_name = self.take_pic()
         if img_name is None:
             return EMOTION_ERR
-        
-        self.process_pic(img_name)
+
+        ret = self.process_pic(img_name)
+        self.clean_data()
+        if not ret:
+            return EMOTION_ERR
+
         emotion = self.process_emotion()
         self.pic_n += 1
 
