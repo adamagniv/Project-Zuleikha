@@ -4,7 +4,7 @@ conv_logs/
 faces/
 processed/
 old/
-*.bat
+Zuleikha.bat
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
