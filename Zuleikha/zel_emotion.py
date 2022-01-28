@@ -119,7 +119,8 @@ class ZEmotion:
                 break
             
         if emotion is None:
-            line += "Neutral"
+            emotion = "Neutral"
+            line += emotion
 
         self.log.write(line + "\n")
         return emotion
