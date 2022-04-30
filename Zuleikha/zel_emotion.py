@@ -25,21 +25,18 @@ EMOTION_ERR = "Error"
 #   HAPPINESS  = AU06 + AU12
 
 class ZEmotion:
-    def __init__(self, session_uuid, work=True):
-        self.work = work
+    def __init__(self, session_uuid):
         self.uuid = session_uuid
         self.pic_n = 0
         self.au_exsist_l = []
         self.au_intensity_l = []
-        if self.work:
-            self.web_cam = VideoCapture(CAM_PORT, CAP_DSHOW)
-            self.log = open("conv_logs/" + self.uuid + "_emotions.txt", "w")        
+        self.web_cam = VideoCapture(CAM_PORT, CAP_DSHOW)
+        self.log = open("conv_logs/" + self.uuid + "_emotions.txt", "w")
 
     def __del__(self):
-        if self.work:
-            if not self.log.closed:
-                self.log.close()
-            self.web_cam.release()
+        if not self.log.closed:
+            self.log.close()
+        self.web_cam.release()
 
     def take_pic(self):
         result = None
@@ -136,9 +133,6 @@ class ZEmotion:
                 os.remove(path)
 
     def run(self):
-        if not self.work:
-            return EMOTION_ERR
-
         self.au_exsist_l = []
         self.au_intensity_l = []
 

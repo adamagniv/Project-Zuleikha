@@ -64,7 +64,7 @@ def print_banner():
 
 
 class Zuleikha:
-    def __init__(self, zconn, key=None, log=True, is_master=False):
+    def __init__(self, zconn, key=None, log=True, is_master=False, debug=False):
         self.zconn = zconn
         self.zemotion = None
         self.ctx_q = Queue(7)
@@ -78,6 +78,7 @@ class Zuleikha:
         self.remote_name = ''
         self.remote_pronoun = ''
         self.gpt_engine = "davinci"
+        self.debug = debug
         openai.api_key = key
 
     def __del__(self):
@@ -188,10 +189,14 @@ class Zuleikha:
             quit = not self.recv_message()
             if quit:
                 break
+            elif (self.is_master):
+                print()
             
             quit = not self.send_message()
             if quit:
-                break        
+                break
+            elif (not self.is_master):
+                print()
         return
 
     def choose_game(self):
@@ -234,7 +239,8 @@ class Zuleikha:
             self.log.write(logged_msg + "\n")
         zul_msg = self.recv_emotion()
         print(logged_msg)
-        print(zul_msg)
+        if (zul_msg is not None):
+            print(zul_msg)
         self.update_ctx(logged_msg)
         self.disrupt -= 1
 
@@ -247,7 +253,13 @@ class Zuleikha:
                 break
             print("[Zuleikha]: psssssst, hey! write something!")
 
-        local_emotion = self.zemotion.run()
+        logged_msg = self.local_name + ": " + msg
+        if (self.should_log):
+            self.log.write(logged_msg + "\n")
+
+        local_emotion = EMOTION_ERR
+        if (self.zemotion is not None):
+            local_emotion = self.zemotion.run()
         quit = False
         if msg == QUIT_MSG:
             quit = True
@@ -256,9 +268,6 @@ class Zuleikha:
             msg = self.disrupt_msg()
             self.disrupt = randint(3,7)
 
-        logged_msg = self.local_name + ": " + msg
-        if (self.should_log):
-            self.log.write(logged_msg + "\n")
         self.zconn.ZSend(msg)
         self.send_emotion(local_emotion)
         self.update_ctx(logged_msg)
@@ -272,7 +281,7 @@ class Zuleikha:
         return True
 
     def send_emotion(self, emotion):
-        if (emotion == EMOTION_ERR):
+        if (emotion == EMOTION_ERR) and (self.debug):
             print("[Zuleikha]: I think there is an ERROR with your camera.")
         self.zconn.ZSend(emotion)
 
@@ -280,14 +289,18 @@ class Zuleikha:
         remote_emotion = self.zconn.ZRecv()
         line = "[Zuleikha]: I think " + self.remote_pronoun + " felt " + remote_emotion + " when the message was sent."
         if (remote_emotion == EMOTION_ERR):
-            line = "[Zuleikha]: I had a problem reading emotions for this message."
+            if (self.debug):
+                line = "[Zuleikha]: I had a problem reading emotions for this message."
+            else:
+                line = None
 
         return line
 
-    def run(self):
+    def run(self, init_camera=True):
         self.zconn.setup()
         self.create_log()
-        self.zemotion = ZEmotion(self.session, True)
+        if (init_camera):
+            self.zemotion = ZEmotion(self.session)
         print_banner()
         self.game()
 

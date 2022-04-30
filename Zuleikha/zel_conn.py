@@ -1,6 +1,7 @@
 import socket
 
 SERV_IP_ADDR = "20.0.0.10"
+#SERV_IP_ADDR = "127.0.0.1"
 PORT = 9001
 MSG_LEN = 512
 
