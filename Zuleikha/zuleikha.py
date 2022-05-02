@@ -62,13 +62,17 @@ def print_banner():
     loop_dots("\tWasting Your Time")
     print("", flush=True)
 
+SAFE = "0"
+SENSITIVE = "1"
+UNSAFE = "2"
+TOXIC_TRESHOLD = -0.355
 
 class Zuleikha:
     def __init__(self, zconn, key=None, log=True, is_master=False, debug=False):
         self.zconn = zconn
         self.zemotion = None
         self.ctx_q = Queue(7)
-        self.disrupt = randint(3,7)
+        self.disrupt = randint(3,5)
         self.session = str(uuid4())
         self.is_master = is_master
         self.should_log = log
@@ -160,14 +164,52 @@ class Zuleikha:
 
         return completion.choices[0].text
 
+    def check_gpt_response(self, text='', ignore=True):
+        if ignore:
+            return True
+
+        response = openai.Completion.create(engine="content-filter-alpha",
+                                            prompt = "<|endoftext|>"+text+"\n--\nLabel:",
+                                            temperature=0,
+                                            max_tokens=1,
+                                            top_p=0,
+                                            logprobs=10)
+        output_label = response.choices[0].text
+
+        # default is UNSAFE value.
+        if output_label not in [SAFE, SENSITIVE, UNSAFE]:
+            return False
+        elif output_label != UNSAFE:
+            return True
+
+        # If the model returns "2", return its confidence in 2 or other output-labels
+        logprobs = response.choices[0].logprobs.top_logprobs[0]
+
+        # If the model is not sufficiently confident in "2",
+        # choose the most probable of "0" or "1"
+        if logprobs[UNSAFE] < TOXIC_TRESHOLD:
+            logprob_0 = logprobs.get(SAFE, None)
+            logprob_1 = logprobs.get(SENSITIVE, None)
+
+            # If "0" or "1" have probabilities - msg is safe enough
+            if (logprob_0 is not None) or (logprob_1 is not None):
+                return True
+
+        return False
+
     def disrupt_msg(self):
         msg = 'BLABLA'
-        prompt = self.scene_info + " " + EMOTION[randint(0, len(EMOTION) -1)] + "\n\n" + \
-                "\n".join(str(x) for x in list(self.ctx_q.queue)) + "\n" + \
-                self.local_name + ":"
-        msg = self.create_gpt_response(prompt)
+        for i in range(0, 3):
+            prompt = self.scene_info + " " + EMOTION[randint(0, len(EMOTION) -1)] + "\n\n" + \
+                    "\n".join(str(x) for x in list(self.ctx_q.queue)) + "\n" + \
+                    self.local_name + ":"
+            msg = self.create_gpt_response(prompt).strip()
+            # message is not unsafe - return it.
+            if (self.check_gpt_response(msg)):
+                return msg
 
-        return msg.strip()
+        # unable to create a not unsafe message
+        return None
 
     def game(self):
         print(WELCOME)
@@ -265,8 +307,12 @@ class Zuleikha:
             quit = True
         elif msg != QUIT_MSG and self.disrupt <= 0:
             # Zuleikha will disrupt the message, the sender won't know ATM
-            msg = self.disrupt_msg()
-            self.disrupt = randint(3,7)
+            gen_msg = self.disrupt_msg()
+            if gen_msg is not None:
+                msg = gen_msg
+            elif (self.debug):
+                print("[Zuleikha]: Don't you know that you're toxic?")
+            self.disrupt = randint(3,5)
 
         self.zconn.ZSend(msg)
         self.send_emotion(local_emotion)
