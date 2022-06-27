@@ -165,9 +165,6 @@ class Zuleikha:
         return completion.choices[0].text
 
     def check_gpt_response(self, text='', ignore=True):
-        if ignore:
-            return True
-
         response = openai.Completion.create(engine="content-filter-alpha",
                                             prompt = "<|endoftext|>"+text+"\n--\nLabel:",
                                             temperature=0,
@@ -175,6 +172,9 @@ class Zuleikha:
                                             top_p=0,
                                             logprobs=10)
         output_label = response.choices[0].text
+
+        if ignore:
+            return True
 
         # default is UNSAFE value.
         if output_label not in [SAFE, SENSITIVE, UNSAFE]:
