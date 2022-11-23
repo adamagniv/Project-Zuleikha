@@ -14,8 +14,8 @@ WELCOME = ("Hello, my name is Zuleikha. I'm inviting you to play a game :)\n"
         "\t2. You are NOT ALLOWED TO SPEAK OUTLOUD! use only the prompt I provide.\n"
         "\t3. You are going to choose a pre-defined scene to take a part of. Please choose the one that fits the real relationship you two have.\n"
         "\t4. Please stay in character.\n"
-        "\t5. If you want to quit please enter '" + QUIT_MSG + "' to shut me down.\n"
-        "\tNOTE: During this game I'm going to log the conversation and use the computer's camera. Taking part in the experiment means you agree.")
+        "\t5. If you want to quit please enter '" + QUIT_MSG + "' to shut me down.")
+CAMERA_NOTICE = "\tNOTE: During this game I'm going to log the conversation and use the computer's camera. Taking part in the experiment means you agree."
 
 SCENE_INFO = [  ("",{True: ("", ""), False: ("", "")}), 
                 ("couple.scene", {True: ("Or", "he"), False: ("Nina", "she")}),
@@ -214,8 +214,10 @@ class Zuleikha:
         # unable to create a "safe" message
         return None
 
-    def game(self):
+    def game(self, camera_notice=True):
         print(WELCOME)
+        if (camera_notice):
+            print(CAMERA_NOTICE)
         sleep(3)
         print("Let us begin.")
         self.choose_game()
@@ -351,6 +353,6 @@ class Zuleikha:
         if (init_camera):
             self.zemotion = ZEmotion(self.session)
         print_banner()
-        self.game()
+        self.game(init_camera)
 
         return
