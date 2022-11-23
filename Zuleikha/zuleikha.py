@@ -164,7 +164,7 @@ class Zuleikha:
 
         return completion.choices[0].text
 
-    def check_gpt_response(self, text='', ignore=True):
+    def check_gpt_response(self, text='', ignore=False):
         response = openai.Completion.create(engine="content-filter-alpha",
                                             prompt = "<|endoftext|>"+text+"\n--\nLabel:",
                                             temperature=0,
@@ -204,11 +204,14 @@ class Zuleikha:
                     "\n".join(str(x) for x in list(self.ctx_q.queue)) + "\n" + \
                     self.local_name + ":"
             msg = self.create_gpt_response(prompt).strip()
-            # message is not unsafe - return it.
+            # message is "safe" - return it.
             if (self.check_gpt_response(msg)):
                 return msg
+            # TODO: REMOVE!!! this will always return the msg.
+            else:
+                return msg
 
-        # unable to create a not unsafe message
+        # unable to create a "safe" message
         return None
 
     def game(self):
